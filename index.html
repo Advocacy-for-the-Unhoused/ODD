@@ -139,7 +139,6 @@ document.getElementById("submit").addEventListener("click", async () => {
     paymentElement.mount("#payment-element");
   }
 
-  // ⭐ REQUIRED for automatic_payment_methods
   const { error: submitError } = await elements.submit();
   if (submitError) {
     alert(submitError.message);
@@ -154,11 +153,4 @@ document.getElementById("submit").addEventListener("click", async () => {
     }
   });
 });
-
 </script>
-
-
-</body>
-</html>
-
-
