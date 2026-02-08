@@ -155,23 +155,6 @@ document.getElementById("submit").addEventListener("click", async () => {
   });
 });
 
-    if (!clientSecret) {
-      clientSecret = await createPaymentIntent();
-      if (!clientSecret) return;
-
-      elements = stripe.elements({ clientSecret });
-      const paymentElement = elements.create("payment");
-      paymentElement.mount("#payment-element");
-    }
-
-    await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: {
-        return_url: window.location.href
-      }
-    });
-  });
 </script>
 
 
