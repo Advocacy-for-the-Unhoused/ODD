@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Donation Form</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      background-color: #fff6ea;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      color: #146c7d;
+    }
+    h2 {
+      color: #146c7d;
+    }
+    .amount-buttons button {
+      background-color: #146c7d;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .amount-buttons button.selected {
+      background-color: #0f505d;
+    }
+    .custom-amount {
+      margin-top: 10px;
+    }
+    .form-section {
+      margin-top: 20px;
+    }
+    #submit {
+      background-color: #146c7d;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Donation Form</h2>
+
+<div class="amount-buttons">
+  <button data-amount="500">$5</button>
+  <button data-amount="1500">$15</button>
+  <button data-amount="2500">$25</button>
+</div>
+
+<div class="custom-amount">
+  <label>Custom Amount ($):</label>
+  <input type="number" id="customAmount" min="1" />
+</div>
+
+<div class="form-section">
+  <label>
+    <input type="checkbox" id="recurringToggle" />
+    Make this a monthly donation
+  </label>
+</div>
+
+<div class="form-section">
+  <label>Comment (optional):</label><br>
+  <textarea id="comment" rows="3" cols="40"></textarea>
+</div>
+
+<div class="form-section">
+  <label>
+    <input type="checkbox" id="anonymous" />
+    I prefer to remain anonymous on the donor wall
+  </label>
+</div>
+
+<div id="payment-element"></div>
+
+<button id="submit">Donate</button>
+
+<script>
+  const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
+
+  let selectedAmount = null;
+
+  document.querySelectorAll(".amount-buttons button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedAmount = parseInt(btn.dataset.amount);
+      document.getElementById("customAmount").value = "";
+    });
+  });
+
+  document.getElementById("customAmount").addEventListener("input", () => {
+    selectedAmount = parseInt(document.getElementById("customAmount").value) * 100;
+    document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
+  });
+
+  async function initialize() {
+    const response = await fetch("YOUR_BACKEND_URL/create-payment-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: selectedAmount,
+        recurring: document.getElementById("recurringToggle").checked,
+        comment: document.getElementById("comment").value,
+        anonymous: document.getElementById("anonymous").checked
+      })
+    });
+
+    const { clientSecret } = await response.json();
+
+    const elements = stripe.elements();
+    const paymentElement = elements.create("payment");
+    paymentElement.mount("#payment-element");
+
+    document.getElementById("submit").addEventListener("click", async () => {
+      await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: window.location.href
+        }
+      });
+    });
+  }
+
+  initialize();
+</script>
+
+</body>
+</html>
