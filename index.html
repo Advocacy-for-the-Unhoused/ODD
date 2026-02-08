@@ -85,6 +85,8 @@
   const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
 
   let selectedAmount = null;
+  let elements = null;
+  let clientSecret = null;
 
   document.querySelectorAll(".amount-buttons button").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -100,7 +102,7 @@
     document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
   });
 
-  async function initialize() {
+  async function createPaymentIntent() {
     const response = await fetch("https://donations.madhavsindia.workers.dev/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -112,25 +114,35 @@
       })
     });
 
-    const { clientSecret } = await response.json();
+    const data = await response.json();
+    clientSecret = data.client_secret || data.clientSecret;
 
-    const elements = stripe.elements();
+    elements = stripe.elements();
     const paymentElement = elements.create("payment");
     paymentElement.mount("#payment-element");
-
-    document.getElementById("submit").addEventListener("click", async () => {
-      await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: window.location.href
-        }
-      });
-    });
   }
 
-  initialize();
+  document.getElementById("submit").addEventListener("click", async () => {
+    if (!selectedAmount) {
+      alert("Please select or enter a donation amount.");
+      return;
+    }
+
+    if (!clientSecret) {
+      await createPaymentIntent();
+    }
+
+    await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: window.location.href
+      }
+    });
+  });
 </script>
+
 
 </body>
 </html>
+
