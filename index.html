@@ -124,11 +124,36 @@
     return data.client_secret;
   }
 
-  document.getElementById("submit").addEventListener("click", async () => {
-    if (!selectedAmount) {
-      alert("Please select or enter a donation amount.");
-      return;
+document.getElementById("submit").addEventListener("click", async () => {
+  if (!selectedAmount) {
+    alert("Please select or enter a donation amount.");
+    return;
+  }
+
+  if (!clientSecret) {
+    clientSecret = await createPaymentIntent();
+    if (!clientSecret) return;
+
+    elements = stripe.elements({ clientSecret });
+    const paymentElement = elements.create("payment");
+    paymentElement.mount("#payment-element");
+  }
+
+  // ⭐ REQUIRED for automatic_payment_methods
+  const { error: submitError } = await elements.submit();
+  if (submitError) {
+    alert(submitError.message);
+    return;
+  }
+
+  await stripe.confirmPayment({
+    elements,
+    clientSecret,
+    confirmParams: {
+      return_url: window.location.href
     }
+  });
+});
 
     if (!clientSecret) {
       clientSecret = await createPaymentIntent();
