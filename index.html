@@ -115,11 +115,13 @@
     });
 
     const data = await response.json();
-    clientSecret = data.client_secret || data.clientSecret;
 
-    elements = stripe.elements();
-    const paymentElement = elements.create("payment");
-    paymentElement.mount("#payment-element");
+    if (data.error) {
+      alert("Error: " + data.error);
+      return null;
+    }
+
+    return data.client_secret;
   }
 
   document.getElementById("submit").addEventListener("click", async () => {
@@ -129,7 +131,12 @@
     }
 
     if (!clientSecret) {
-      await createPaymentIntent();
+      clientSecret = await createPaymentIntent();
+      if (!clientSecret) return;
+
+      elements = stripe.elements({ clientSecret });
+      const paymentElement = elements.create("payment");
+      paymentElement.mount("#payment-element");
     }
 
     await stripe.confirmPayment({
