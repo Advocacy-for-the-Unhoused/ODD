@@ -134,7 +134,14 @@ document.getElementById("submit").addEventListener("click", async () => {
     clientSecret = await createPaymentIntent();
     if (!clientSecret) return;
 
-    elements = stripe.elements({ clientSecret });
+    elements = stripe.elements({
+  clientSecret,
+  fields: {
+    billingDetails: {
+      email: 'always'
+    }
+  }
+});
     const paymentElement = elements.create("payment");
     paymentElement.mount("#payment-element");
   }
