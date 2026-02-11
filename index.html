@@ -11,9 +11,7 @@
       padding: 20px;
       color: #146c7d;
     }
-    h2 {
-      color: #146c7d;
-    }
+    h2 { color: #146c7d; }
     .amount-buttons button {
       background-color: #146c7d;
       color: white;
@@ -26,12 +24,8 @@
     .amount-buttons button.selected {
       background-color: #0f505d;
     }
-    .custom-amount {
-      margin-top: 10px;
-    }
-    .form-section {
-      margin-top: 20px;
-    }
+    .custom-amount { margin-top: 10px; }
+    .form-section { margin-top: 20px; }
     #submit {
       background-color: #146c7d;
       color: white;
@@ -88,20 +82,9 @@
   let elements = null;
   let clientSecret = null;
 
-  document.querySelectorAll(".amount-buttons button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      selectedAmount = parseInt(btn.dataset.amount);
-      document.getElementById("customAmount").value = "";
-    });
-  });
-
-  document.getElementById("customAmount").addEventListener("input", () => {
-    selectedAmount = parseInt(document.getElementById("customAmount").value) * 100;
-    document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
-  });
-
+  // -----------------------------
+  // CREATE PAYMENT INTENT
+  // -----------------------------
   async function createPaymentIntent() {
     const response = await fetch("https://donations.madhavsindia.workers.dev/", {
       method: "POST",
@@ -115,49 +98,89 @@
     });
 
     const data = await response.json();
-
     if (data.error) {
       alert("Error: " + data.error);
       return null;
     }
-
     return data.client_secret;
   }
 
-document.getElementById("submit").addEventListener("click", async () => {
-  if (!selectedAmount) {
-    alert("Please select or enter a donation amount.");
-    return;
-  }
-
-  if (!clientSecret) {
+  // -----------------------------
+  // SET UP PAYMENT ELEMENT
+  // -----------------------------
+  async function setupPaymentElement() {
     clientSecret = await createPaymentIntent();
     if (!clientSecret) return;
 
     elements = stripe.elements({
-  clientSecret,
-  fields: {
-    billingDetails: {
-      email: 'always'
-    }
-  }
-});
+      clientSecret,
+      fields: {
+        billingDetails: {
+          email: 'always'
+        }
+      }
+    });
+
     const paymentElement = elements.create("payment");
     paymentElement.mount("#payment-element");
   }
 
-  const { error: submitError } = await elements.submit();
-  if (submitError) {
-    alert(submitError.message);
-    return;
-  }
+  // -----------------------------
+  // AMOUNT BUTTONS
+  // -----------------------------
+  document.querySelectorAll(".amount-buttons button").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
 
-  await stripe.confirmPayment({
-    elements,
-    clientSecret,
-    confirmParams: {
-      return_url: window.location.href
+      selectedAmount = parseInt(btn.dataset.amount);
+      document.getElementById("customAmount").value = "";
+
+      await setupPaymentElement();
+    });
+  });
+
+  // -----------------------------
+  // CUSTOM AMOUNT
+  // -----------------------------
+  document.getElementById("customAmount").addEventListener("input", async () => {
+    selectedAmount = parseInt(document.getElementById("customAmount").value) * 100;
+    document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
+
+    if (selectedAmount > 0) {
+      await setupPaymentElement();
     }
   });
-});
+
+  // -----------------------------
+  // DONATE BUTTON
+  // -----------------------------
+  document.getElementById("submit").addEventListener("click", async () => {
+    if (!selectedAmount) {
+      alert("Please select or enter a donation amount.");
+      return;
+    }
+
+    if (!elements) {
+      alert("Please wait for the payment form to load.");
+      return;
+    }
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      alert(submitError.message);
+      return;
+    }
+
+    await stripe.confirmPayment({
+      elements,
+      clientSecret,
+      confirmParams: {
+        return_url: "https://advocacyfortheunhoused.org/donation-success"
+      }
+    });
+  });
 </script>
+
+</body>
+</html>
