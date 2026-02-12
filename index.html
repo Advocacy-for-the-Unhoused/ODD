@@ -6,7 +6,7 @@
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     body {
-      background-color: #fff6ea;
+      background-color: #ffffff;
       font-family: Arial, sans-serif;
       padding: 20px;
       color: #146c7d;
@@ -112,15 +112,20 @@
     clientSecret = await createPaymentIntent();
     if (!clientSecret) return;
 
-    elements = stripe.elements({
+   elements = stripe.elements({
   clientSecret,
-  appearance: {}, 
+  appearance: {},
   layout: {
     type: "tabs"
   },
   fields: {
     billingDetails: {
       email: "always"
+    }
+  },
+  defaultValues: {
+    billingDetails: {
+      email: ""
     }
   }
 });
