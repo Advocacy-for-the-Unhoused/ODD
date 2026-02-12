@@ -113,13 +113,17 @@
     if (!clientSecret) return;
 
     elements = stripe.elements({
-      clientSecret,
-      fields: {
-        billingDetails: {
-          email: 'always'
-        }
-      }
-    });
+  clientSecret,
+  appearance: {}, 
+  layout: {
+    type: "tabs"
+  },
+  fields: {
+    billingDetails: {
+      email: "always"
+    }
+  }
+});
 
     const paymentElement = elements.create("payment");
     paymentElement.mount("#payment-element");
