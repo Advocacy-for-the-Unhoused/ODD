@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,7 +6,7 @@
   <script src="https://js.stripe.com/v3/"></script>
   <style>
     body {
-      background-color: #a87676;
+      background-color: #ffffff;
       font-family: Arial, sans-serif;
       padding: 20px;
       color: #146c7d;
@@ -126,6 +125,14 @@
   async function setupPaymentElement() {
     if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) return;
 
+    // Unmount existing payment element if it exists
+    if (elements) {
+      const paymentElement = document.querySelector("#payment-element");
+      if (paymentElement) {
+        paymentElement.innerHTML = "";
+      }
+    }
+
     clientSecret = await createPaymentIntent();
     if (!clientSecret) return;
 
@@ -135,19 +142,9 @@
       appearance: {}
     });
 
-    // payment element: layout, fields, defaultValues
+    // payment element: layout only
     const paymentElement = elements.create("payment", {
-      layout: { type: "tabs" },
-      fields: {
-        billingDetails: {
-          email: "always"
-        }
-      },
-      defaultValues: {
-        billingDetails: {
-          email: ""
-        }
-      }
+      layout: { type: "tabs" }
     });
 
     paymentElement.mount("#payment-element");
