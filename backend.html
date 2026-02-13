@@ -86,9 +86,38 @@
   // CREATE PAYMENT INTENT
   // -----------------------------
   async function createPaymentIntent() {
-    if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+  if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+    alert("Please select or enter a valid amount ($1 minimum)");
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://donations.madhavsindia.workers.dev/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: selectedAmount,
+        recurring: document.getElementById("recurringToggle").checked,
+        comment: document.getElementById("comment").value,
+        anonymous: document.getElementById("anonymous").checked
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error("Payment intent error:", data.error);
+      alert("Error creating payment: " + data.error);
       return null;
     }
+    
+    return data.client_secret;
+  } catch (error) {
+    console.error("Network error:", error);
+    alert("Network error. Please try again.");
+    return null;
+  }
+}
 
     const response = await fetch("https://donations.madhavsindia.workers.dev/", {
       method: "POST",
