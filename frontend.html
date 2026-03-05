@@ -488,16 +488,22 @@
         return;
       }
 
-      await stripe.confirmPayment({
+      const result = await stripe.confirmPayment({
         elements,
         clientSecret,
         confirmParams: {
           return_url: "https://www.advocacyfortheunhoused.org/transparency?donor=true"
-        }
+        },
+        redirect: "if_required"
       });
 
-      btn.disabled = false;
-      btn.innerHTML = "Donate Now<span class=\"btn-sub\">Secure · 100% to Supplies</span>";
+      if (result.error) {
+        showError(result.error.message);
+        btn.disabled = false;
+        btn.innerHTML = "Donate Now<span class=\"btn-sub\">Secure · 100% to Supplies</span>";
+      } else {
+        window.top.location.href = "https://www.advocacyfortheunhoused.org/transparency?donor=true";
+      }
     });
   </script>
 </body>
