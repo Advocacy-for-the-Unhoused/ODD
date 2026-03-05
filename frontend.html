@@ -1,230 +1,487 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Donation Form</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Donate | Advocacy for the Unhoused</title>
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <script src="https://js.stripe.com/v3/"></script>
   <style>
+    :root {
+      --camp-orange: #C8522D;
+      --camp-cream: #F9F6F0;
+      --camp-dark: #1A1311;
+      --camp-white: #ffffff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
     body {
-      background-color: #ffffff;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-      color: #146c7d;
+      margin: 0;
+      background-color: var(--camp-dark);
+      font-family: 'Montserrat', sans-serif;
+      color: var(--camp-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 80px;
     }
-    h2 { color: #146c7d; }
-    .amount-buttons button {
-      background-color: #146c7d;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      margin: 5px;
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 50px;
+      color: var(--camp-cream);
+    }
+
+    .page-header .eyebrow {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--camp-orange);
+      margin-bottom: 14px;
+    }
+
+    .page-header h1 {
+      font-family: 'Abril Fatface', serif;
+      font-size: clamp(2.8rem, 8vw, 5.5rem);
+      line-height: 0.95;
+      margin: 0 0 18px;
+      color: var(--camp-cream);
+    }
+
+    .page-header h1 span {
+      color: var(--camp-orange);
+      font-style: italic;
+    }
+
+    .page-header p {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      opacity: 0.75;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background: var(--camp-white);
+      border: 4px solid var(--camp-dark);
+      padding: 56px 56px 48px;
+      max-width: 620px;
+      width: 100%;
+      box-shadow: 18px 18px 0px var(--camp-orange);
+      animation: slideUp 0.6s ease-out both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION LABELS ── */
+    .section-label {
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.25rem;
+      color: var(--camp-dark);
+      margin: 32px 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--camp-dark);
+    }
+
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── AMOUNT BUTTONS ── */
+    .amount-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .amount-btn {
+      background: var(--camp-cream);
+      color: var(--camp-dark);
+      border: 3px solid var(--camp-dark);
+      padding: 14px 10px;
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.3rem;
       cursor: pointer;
-      border-radius: 6px;
+      border-radius: 0;
+      transition: all 0.15s ease;
+      position: relative;
     }
-    .amount-buttons button.selected {
-      background-color: #0f505d;
+
+    .amount-btn:hover {
+      background: var(--camp-dark);
+      color: var(--camp-cream);
+      box-shadow: 4px 4px 0 var(--camp-orange);
     }
-    .custom-amount { margin-top: 10px; }
-    .form-section { margin-top: 20px; }
-    #submit {
-      background-color: #146c7d;
-      color: white;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 6px;
+
+    .amount-btn.selected {
+      background: var(--camp-dark);
+      color: var(--camp-orange);
+      box-shadow: 4px 4px 0 var(--camp-orange);
+    }
+
+    /* ── INPUTS ── */
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--camp-dark);
+      margin-bottom: 6px;
+    }
+
+    .field label .req { color: var(--camp-orange); margin-left: 2px; }
+
+    .field input[type="text"],
+    .field input[type="email"],
+    .field input[type="number"],
+    .field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 3px solid var(--camp-dark);
+      border-radius: 0;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      color: var(--camp-dark);
+      background: var(--camp-cream);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      -moz-appearance: textfield;
+    }
+
+    .field input[type="number"]::-webkit-inner-spin-button,
+    .field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--camp-orange);
+      box-shadow: 4px 4px 0 var(--camp-orange);
+    }
+
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    /* ── CHECKBOXES ── */
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
       cursor: pointer;
-      margin-top: 20px;
+    }
+
+    .check-row input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 3px solid var(--camp-dark);
+      background: var(--camp-cream);
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .check-row input[type="checkbox"]:checked {
+      background: var(--camp-dark);
+    }
+
+    .check-row input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      color: var(--camp-orange);
+      font-size: 14px;
+      font-weight: 900;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .check-row .check-label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--camp-dark);
+    }
+
+    .check-row .check-sublabel {
+      display: block;
+      font-weight: 400;
+      font-size: 0.78rem;
+      opacity: 0.65;
+      margin-top: 2px;
+    }
+
+    /* ── PAYMENT ELEMENT WRAPPER ── */
+    #payment-element {
+      margin-top: 8px;
+      min-height: 40px;
+    }
+
+    /* ── DONATE BUTTON ── */
+    .donate-btn {
+      margin-top: 28px;
+      width: 100%;
+      background: var(--camp-dark);
+      color: var(--camp-cream);
+      border: 3px solid var(--camp-dark);
+      padding: 18px 24px;
+      font-family: 'Abril Fatface', serif;
+      font-size: 1.3rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .donate-btn:hover:not(:disabled) {
+      background: var(--camp-orange);
+      border-color: var(--camp-orange);
+      box-shadow: 6px 6px 0 var(--camp-dark);
+      transform: translate(-2px, -2px);
+    }
+
+    .donate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .donate-btn .btn-sub {
+      display: block;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0.75;
+      margin-top: 3px;
+    }
+
+    /* ── FINE PRINT ── */
+    .fine-print {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--camp-cream);
+      opacity: 0.45;
+      margin-top: 24px;
+      max-width: 620px;
+      line-height: 1.7;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 2px solid rgba(0,0,0,0.08);
+      margin: 28px 0 0;
+    }
+
+    @media (max-width: 600px) {
+      .form-card { padding: 36px 28px 32px; }
+      .amount-grid { grid-template-columns: repeat(3, 1fr); }
     }
   </style>
 </head>
 <body>
 
-<h2>Donation Form</h2>
+  <header class="page-header">
+    <div class="eyebrow">Advocacy · Awareness · Action</div>
+    <h1>Make a <span>Difference</span></h1>
+    <p>Every dollar goes directly to supplies for unhoused neighbors across Massachusetts. No overhead deducted.</p>
+  </header>
 
-<div class="form-section">
-  <label>Name: <span style="color: red;">*</span></label><br>
-  <input type="text" id="donorName" required style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-</div>
+  <div class="form-card">
 
-<div class="form-section">
-  <label>Email (optional):</label><br>
-  <input type="email" id="donorEmail" style="width: 100%; max-width: 400px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-</div>
+    <!-- PERSONAL INFO -->
+    <div class="section-label">Your Info</div>
 
-<div class="amount-buttons">
-  <button data-amount="500">$5</button>
-  <button data-amount="1500">$15</button>
-  <button data-amount="2500">$25</button>
-</div>
+    <div class="field">
+      <label>Full Name <span class="req">*</span></label>
+      <input type="text" id="donorName" placeholder="Jane Smith" required />
+    </div>
 
-<div class="custom-amount">
-  <label>Custom Amount ($):</label>
-  <input type="number" id="customAmount" min="1" />
-</div>
+    <div class="field">
+      <label>Email <span style="opacity:.5;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <input type="email" id="donorEmail" placeholder="jane@example.com" />
+    </div>
 
-<div class="form-section">
-  <label>
-    <input type="checkbox" id="recurringToggle" />
-    Make this a monthly donation
-  </label>
-</div>
+    <!-- AMOUNT -->
+    <div class="section-label">Donation Amount</div>
 
-<div class="form-section">
-  <label>Comment (optional):</label><br>
-  <textarea id="comment" rows="3" cols="40"></textarea>
-</div>
+    <div class="amount-grid">
+      <button class="amount-btn" data-amount="500">$5</button>
+      <button class="amount-btn" data-amount="1500">$15</button>
+      <button class="amount-btn" data-amount="2500">$25</button>
+    </div>
 
-<div class="form-section">
-  <label>
-    <input type="checkbox" id="anonymous" />
-    I prefer to remain anonymous on the donor wall
-  </label>
-</div>
+    <div class="field">
+      <label>Custom Amount ($)</label>
+      <input type="number" id="customAmount" min="1" placeholder="e.g. 50" />
+    </div>
 
-<div id="payment-element"></div>
+    <!-- OPTIONS -->
+    <div class="section-label">Options</div>
 
-<button id="submit">Donate</button>
+    <label class="check-row">
+      <input type="checkbox" id="recurringToggle" />
+      <span class="check-label">
+        Make this a monthly donation
+        <span class="check-sublabel">You can cancel at any time.</span>
+      </span>
+    </label>
 
-<script>
-  const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
+    <label class="check-row">
+      <input type="checkbox" id="anonymous" />
+      <span class="check-label">
+        Remain anonymous on the donor wall
+        <span class="check-sublabel">Your name won't appear publicly.</span>
+      </span>
+    </label>
 
-  let selectedAmount = null;
-  let elements = null;
-  let clientSecret = null;
+    <div class="field" style="margin-top: 10px;">
+      <label>Leave a Comment <span style="opacity:.5;font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <textarea id="comment" placeholder="Share why you're donating…"></textarea>
+    </div>
 
-  // -----------------------------
-  // CREATE PAYMENT INTENT
-  // -----------------------------
-  async function createPaymentIntent() {
-    if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
-      alert("Please select or enter a valid amount ($1 minimum)");
-      return null;
-    }
+    <!-- PAYMENT -->
+    <hr class="divider" />
+    <div class="section-label" style="margin-top: 24px;">Payment</div>
 
-    const donorName = document.getElementById("donorName").value.trim();
-    if (!donorName) {
-      alert("Please enter your name");
-      return null;
-    }
+    <div id="payment-element"></div>
 
-    try {
-      const response = await fetch("https://donations.madhavsindia.workers.dev/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: selectedAmount,
-          name: donorName,
-          email: document.getElementById("donorEmail").value.trim(),
-          recurring: document.getElementById("recurringToggle").checked,
-          comment: document.getElementById("comment").value.trim(),
-          anonymous: document.getElementById("anonymous").checked
-        })
-      });
+    <button class="donate-btn" id="submit">
+      Donate Now
+      <span class="btn-sub">Secure · 100% to Supplies</span>
+    </button>
 
-      const data = await response.json();
-      
-      if (data.error) {
-        console.error("Payment intent error:", data.error);
-        alert("Error creating payment: " + data.error);
+  </div>
+
+  <p class="fine-print">
+    Advocacy for the Unhoused, Inc. is a federally recognized 501(c)(3) nonprofit.<br>
+    Donations are tax-deductible to the extent permitted by law.
+  </p>
+
+  <script>
+    const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
+
+    let selectedAmount = null;
+    let elements = null;
+    let clientSecret = null;
+
+    async function createPaymentIntent() {
+      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+        alert("Please select or enter a valid amount ($1 minimum)");
         return null;
       }
-      
-      return data.client_secret;
-    } catch (error) {
-      console.error("Network error:", error);
-      alert("Network error. Please try again.");
-      return null;
-    }
-  }
-
-  // -----------------------------
-  // SET UP PAYMENT ELEMENT
-  // -----------------------------
-  async function setupPaymentElement() {
-    if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) return;
-
-    // Unmount existing payment element if it exists
-    if (elements) {
-      const paymentElement = document.querySelector("#payment-element");
-      if (paymentElement) {
-        paymentElement.innerHTML = "";
+      const donorName = document.getElementById("donorName").value.trim();
+      if (!donorName) {
+        alert("Please enter your name");
+        return null;
+      }
+      try {
+        const response = await fetch("https://donations.madhavsindia.workers.dev/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: selectedAmount,
+            name: donorName,
+            email: document.getElementById("donorEmail").value.trim(),
+            recurring: document.getElementById("recurringToggle").checked,
+            comment: document.getElementById("comment").value.trim(),
+            anonymous: document.getElementById("anonymous").checked
+          })
+        });
+        const data = await response.json();
+        if (data.error) { alert("Error creating payment: " + data.error); return null; }
+        return data.client_secret;
+      } catch (error) {
+        alert("Network error. Please try again.");
+        return null;
       }
     }
 
-    clientSecret = await createPaymentIntent();
-    if (!clientSecret) return;
+    async function setupPaymentElement() {
+      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) return;
+      document.querySelector("#payment-element").innerHTML = "";
 
-    // elements: only clientSecret/appearance
-    elements = stripe.elements({
-      clientSecret,
-      appearance: {}
+      clientSecret = await createPaymentIntent();
+      if (!clientSecret) return;
+
+      elements = stripe.elements({ clientSecret, appearance: {
+        theme: 'stripe',
+        variables: {
+          colorPrimary: '#C8522D',
+          colorBackground: '#F9F6F0',
+          colorText: '#1A1311',
+          borderRadius: '0px',
+          fontFamily: 'Montserrat, sans-serif',
+        }
+      }});
+
+      const paymentElement = elements.create("payment", { layout: { type: "tabs" } });
+      paymentElement.mount("#payment-element");
+    }
+
+    document.querySelectorAll(".amount-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        selectedAmount = parseInt(btn.dataset.amount);
+        document.getElementById("customAmount").value = "";
+        await setupPaymentElement();
+      });
     });
 
-    // payment element: layout only
-    const paymentElement = elements.create("payment", {
-      layout: { type: "tabs" }
-    });
-
-    paymentElement.mount("#payment-element");
-  }
-
-  // -----------------------------
-  // AMOUNT BUTTONS
-  // -----------------------------
-  document.querySelectorAll(".amount-buttons button").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-
-      selectedAmount = parseInt(btn.dataset.amount);
-      document.getElementById("customAmount").value = "";
-
+    document.getElementById("customAmount").addEventListener("input", async () => {
+      const val = document.getElementById("customAmount").value;
+      if (!val || isNaN(val) || val < 1) return;
+      selectedAmount = parseInt(val) * 100;
+      document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
       await setupPaymentElement();
     });
-  });
 
-  // -----------------------------
-  // CUSTOM AMOUNT
-  // -----------------------------
-  document.getElementById("customAmount").addEventListener("input", async () => {
-    const val = document.getElementById("customAmount").value;
-    if (!val || isNaN(val) || val < 1) return;
-
-    selectedAmount = parseInt(val) * 100;
-    document.querySelectorAll(".amount-buttons button").forEach(b => b.classList.remove("selected"));
-
-    await setupPaymentElement();
-  });
-
-  // -----------------------------
-  // DONATE BUTTON
-  // -----------------------------
-  document.getElementById("submit").addEventListener("click", async () => {
-    if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
-      alert("Please select or enter a donation amount");
-      return;
-    }
-
-    if (!elements) {
-      alert("Payment form not ready. Please try again.");
-      return;
-    }
-
-    const { error: submitError } = await elements.submit();
-    if (submitError) {
-      alert("Error: " + submitError.message);
-      return;
-    }
-
-    await stripe.confirmPayment({
-      elements,
-      clientSecret,
-      confirmParams: {
-        return_url: "https://www.advocacyfortheunhoused.org/transparency?donor=true"
+    document.getElementById("submit").addEventListener("click", async () => {
+      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+        alert("Please select or enter a donation amount");
+        return;
       }
-    });
-  });
-</script>
+      if (!elements) {
+        alert("Payment form not ready. Please select an amount first.");
+        return;
+      }
+      const btn = document.getElementById("submit");
+      btn.disabled = true;
+      btn.textContent = "Processing…";
 
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        alert("Error: " + submitError.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Donate Now<span class="btn-sub">Secure · 100% to Supplies</span>';
+        return;
+      }
+
+      await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: "https://www.advocacyfortheunhoused.org/transparency?donor=true"
+        }
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = 'Donate Now<span class="btn-sub">Secure · 100% to Supplies</span>';
+    });
+  </script>
 </body>
 </html>
