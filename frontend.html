@@ -502,7 +502,19 @@
         btn.disabled = false;
         btn.innerHTML = "Donate Now<span class=\"btn-sub\">Secure · 100% to Supplies</span>";
       } else {
-        window.top.location.href = "https://www.advocacyfortheunhoused.org/transparency?donor=true";
+        // Show success state — no redirect
+        document.querySelector(".form-card").innerHTML = `
+          <div style="text-align:center; padding: 48px 32px;">
+            <div style="font-size:3rem; margin-bottom:20px;">&#10084;&#65039;</div>
+            <div style="font-family:'Abril Fatface',serif; font-size:2rem; color:var(--camp-dark); margin-bottom:16px;">Donation Received</div>
+            <div style="font-size:0.95rem; color:#555; line-height:1.8; max-width:360px; margin:0 auto;">
+              Thank you for your generosity. Every dollar goes directly to supplies for unhoused neighbors across Massachusetts.
+            </div>
+          </div>`;
+        document.querySelector(".page-header p").style.display = "none";
+        document.getElementById("submit").style.display = "none";
+        document.querySelector(".fine-print").style.display = "none";
+        document.getElementById("error-banner").style.display = "none";
       }
     });
   </script>
