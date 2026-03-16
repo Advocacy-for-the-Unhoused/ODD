@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Donate | Advocacy for the Unhoused</title>
   <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Montserrat:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://js.stripe.com/v3/" defer></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_LIVE_PAYPAL_CLIENT_ID&components=buttons&enable-funding=venmo,paylater&currency=USD" defer></script>
   <style>
     :root {
       --camp-orange: #C8522D;
@@ -229,9 +230,38 @@
       min-height: 40px;
     }
 
-    /* ── DONATE BUTTON ── */
+    /* ── PAYMENT METHOD DIVIDER ── */
+    .payment-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 28px 0;
+    }
+
+    .payment-divider::before,
+    .payment-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 2px solid rgba(0,0,0,0.12);
+    }
+
+    .payment-divider span {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(26,19,17,0.4);
+      white-space: nowrap;
+    }
+
+    /* ── PAYPAL CONTAINER ── */
+    #paypal-button-container {
+      margin-bottom: 4px;
+    }
+
+    /* ── DONATE BUTTON (Card) ── */
     .donate-btn {
-      margin-top: 28px;
+      margin-top: 20px;
       width: 100%;
       background: var(--camp-dark);
       color: var(--camp-cream);
@@ -266,6 +296,19 @@
       text-transform: uppercase;
       opacity: 0.75;
       margin-top: 3px;
+    }
+
+    /* ── ERROR BANNER ── */
+    #error-banner {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: rgba(200,82,45,0.1);
+      border: 2px solid var(--camp-orange);
+      color: var(--camp-dark);
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1.5;
     }
 
     /* ── FINE PRINT ── */
@@ -357,12 +400,21 @@
     <hr class="divider" />
     <div class="section-label" style="margin-top: 24px;">Payment</div>
 
+    <!-- PAYPAL BUTTONS -->
+    <div id="paypal-button-container"></div>
+
+    <!-- DIVIDER between PayPal and card -->
+    <div class="payment-divider">
+      <span>or donate with card</span>
+    </div>
+
+    <!-- STRIPE PAYMENT ELEMENT -->
     <div id="payment-element"></div>
 
-    <div id="error-banner" style="display:none; margin-top:16px; padding:14px 18px; background:rgba(200,82,45,0.1); border:2px solid var(--camp-orange); color:var(--camp-dark); font-size:0.85rem; font-weight:600; line-height:1.5;"></div>
+    <div id="error-banner"></div>
 
     <button class="donate-btn" id="submit">
-      Donate Now
+      Donate with Card
       <span class="btn-sub">Secure · 100% to Supplies</span>
     </button>
 
@@ -374,135 +426,28 @@
   </p>
 
   <script>
-    const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
+    document.addEventListener("DOMContentLoaded", function () {
 
-    let selectedAmount = null;
-    let elements = null;
-    let clientSecret = null;
+      const stripe = Stripe("pk_live_51Sw4Nx5uEjUh9OVPJly2uieejMzvov6iNHTWK4gmd7SQ2bkUJE33mMF4Op8JlgGuBr06XGWyTsKA70twnKHPbm6I00ngJRbymb");
 
-    function showError(msg) {
-      const el = document.getElementById("error-banner");
-      el.textContent = msg;
-      el.style.display = "block";
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-    function clearError() {
-      document.getElementById("error-banner").style.display = "none";
-    }
+      let selectedAmount = null;
+      let elements = null;
+      let clientSecret = null;
 
-    async function createPaymentIntent() {
-      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
-        showError("Please select or enter a valid amount ($1 minimum).");
-        return null;
-      }
-      const donorName = document.getElementById("donorName").value.trim();
-      if (!donorName) {
-        showError("Please enter your name before selecting an amount.");
-        return null;
-      }
-      clearError();
-      try {
-        const response = await fetch("https://donations.madhavsindia.workers.dev/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: selectedAmount,
-            name: donorName,
-            email: document.getElementById("donorEmail").value.trim(),
-            recurring: document.getElementById("recurringToggle").checked,
-            comment: document.getElementById("comment").value.trim(),
-            anonymous: document.getElementById("anonymous").checked
-          })
-        });
-        if (!response.ok) {
-          showError("Payment server error (" + response.status + "). Please try again or contact us.");
-          return null;
-        }
-        const data = await response.json();
-        if (data.error) { showError("Payment error: " + data.error); return null; }
-        return data.client_secret;
-      } catch (error) {
-        showError("Network error — please check your connection and try again.");
-        return null;
-      }
-    }
-
-    async function setupPaymentElement() {
-      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) return;
-      document.querySelector("#payment-element").innerHTML = "";
-
-      clientSecret = await createPaymentIntent();
-      if (!clientSecret) return;
-
-      elements = stripe.elements({ clientSecret, appearance: {
-        theme: "stripe",
-        variables: {
-          colorPrimary: "#C8522D",
-          colorBackground: "#F9F6F0",
-          colorText: "#1A1311",
-          borderRadius: "0px",
-          fontFamily: "Montserrat, sans-serif",
-        }
-      }});
-
-      const paymentElement = elements.create("payment", { layout: { type: "tabs" } });
-      paymentElement.mount("#payment-element");
-    }
-
-    document.querySelectorAll(".amount-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
-        btn.classList.add("selected");
-        selectedAmount = parseInt(btn.dataset.amount);
-        document.getElementById("customAmount").value = "";
-        await setupPaymentElement();
-      });
-    });
-
-    document.getElementById("customAmount").addEventListener("input", async () => {
-      const val = document.getElementById("customAmount").value;
-      if (!val || isNaN(val) || val < 1) return;
-      selectedAmount = parseInt(val) * 100;
-      document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
-      await setupPaymentElement();
-    });
-
-    document.getElementById("submit").addEventListener("click", async () => {
-      if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
-        showError("Please select or enter a donation amount.");
-        return;
-      }
-      if (!elements) {
-        showError("Payment form not ready. Please select an amount first.");
-        return;
-      }
-      const btn = document.getElementById("submit");
-      btn.disabled = true;
-      btn.textContent = "Processing…";
-
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        showError(submitError.message);
-        btn.disabled = false;
-        btn.innerHTML = "Donate Now<span class=\"btn-sub\">Secure · 100% to Supplies</span>";
-        return;
+      // ── HELPERS ──────────────────────────────────────
+      function showError(msg) {
+        const el = document.getElementById("error-banner");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
-      const result = await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: "https://www.advocacyfortheunhoused.org/transparency?donor=true"
-        },
-        redirect: "if_required"
-      });
+      function clearError() {
+        const el = document.getElementById("error-banner");
+        el.style.display = "none";
+      }
 
-      if (result.error) {
-        showError(result.error.message);
-        btn.disabled = false;
-        btn.innerHTML = "Donate Now<span class=\"btn-sub\">Secure · 100% to Supplies</span>";
-      } else {
-        // Show success state — no redirect
+      function showSuccess() {
         document.querySelector(".form-card").innerHTML = `
           <div style="text-align:center; padding: 48px 32px;">
             <div style="font-size:3rem; margin-bottom:20px;">&#10084;&#65039;</div>
@@ -512,11 +457,222 @@
             </div>
           </div>`;
         document.querySelector(".page-header p").style.display = "none";
-        document.getElementById("submit").style.display = "none";
         document.querySelector(".fine-print").style.display = "none";
-        document.getElementById("error-banner").style.display = "none";
       }
-    });
+
+      function getFormData() {
+        return {
+          name: document.getElementById("donorName").value.trim(),
+          email: document.getElementById("donorEmail").value.trim(),
+          recurring: document.getElementById("recurringToggle").checked,
+          comment: document.getElementById("comment").value.trim(),
+          anonymous: document.getElementById("anonymous").checked
+        };
+      }
+
+      // ── STRIPE ───────────────────────────────────────
+      async function createPaymentIntent() {
+        if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+          showError("Please select or enter a valid amount ($1 minimum).");
+          return null;
+        }
+        const donorName = document.getElementById("donorName").value.trim();
+        if (!donorName) {
+          showError("Please enter your name before selecting an amount.");
+          return null;
+        }
+        clearError();
+        try {
+          const response = await fetch("https://donations.madhavsindia.workers.dev/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: selectedAmount, ...getFormData() })
+          });
+          if (!response.ok) {
+            showError("Payment server error (" + response.status + "). Please try again or contact us.");
+            return null;
+          }
+          const data = await response.json();
+          if (data.error) { showError("Payment error: " + data.error); return null; }
+          return data.client_secret;
+        } catch (error) {
+          showError("Network error — please check your connection and try again.");
+          return null;
+        }
+      }
+
+      async function setupPaymentElement() {
+        if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) return;
+        document.querySelector("#payment-element").innerHTML = "";
+
+        clientSecret = await createPaymentIntent();
+        if (!clientSecret) return;
+
+        elements = stripe.elements({
+          clientSecret,
+          appearance: {
+            theme: "stripe",
+            variables: {
+              colorPrimary: "#C8522D",
+              colorBackground: "#F9F6F0",
+              colorText: "#1A1311",
+              borderRadius: "0px",
+              fontFamily: "Montserrat, sans-serif",
+            }
+          }
+        });
+
+        const paymentElement = elements.create("payment", { layout: { type: "tabs" } });
+        paymentElement.mount("#payment-element");
+      }
+
+      // ── AMOUNT SELECTION ─────────────────────────────
+      document.querySelectorAll(".amount-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          selectedAmount = parseInt(btn.dataset.amount);
+          document.getElementById("customAmount").value = "";
+          await setupPaymentElement();
+        });
+      });
+
+      document.getElementById("customAmount").addEventListener("input", async () => {
+        const val = document.getElementById("customAmount").value;
+        if (!val || isNaN(val) || val < 1) return;
+        selectedAmount = parseInt(val) * 100;
+        document.querySelectorAll(".amount-btn").forEach(b => b.classList.remove("selected"));
+        await setupPaymentElement();
+      });
+
+      // ── STRIPE SUBMIT ────────────────────────────────
+      document.getElementById("submit").addEventListener("click", async () => {
+        if (!selectedAmount || isNaN(selectedAmount) || selectedAmount < 100) {
+          showError("Please select or enter a donation amount.");
+          return;
+        }
+        if (!elements) {
+          showError("Payment form not ready. Please select an amount first.");
+          return;
+        }
+        const btn = document.getElementById("submit");
+        btn.disabled = true;
+        btn.textContent = "Processing…";
+
+        const { error: submitError } = await elements.submit();
+        if (submitError) {
+          showError(submitError.message);
+          btn.disabled = false;
+          btn.innerHTML = 'Donate with Card<span class="btn-sub">Secure · 100% to Supplies</span>';
+          return;
+        }
+
+        const result = await stripe.confirmPayment({
+          elements,
+          clientSecret,
+          confirmParams: {
+            return_url: "https://www.advocacyfortheunhoused.org/transparency?donor=true"
+          },
+          redirect: "if_required"
+        });
+
+        if (result.error) {
+          showError(result.error.message);
+          btn.disabled = false;
+          btn.innerHTML = 'Donate with Card<span class="btn-sub">Secure · 100% to Supplies</span>';
+        } else {
+          showSuccess();
+        }
+      });
+
+      // ── PAYPAL BUTTONS ───────────────────────────────
+      if (typeof paypal !== 'undefined') {
+        paypal.Buttons({
+          style: {
+            layout: 'vertical',
+            color: 'black',
+            shape: 'rect',
+            label: 'donate'
+          },
+
+          createOrder: async function (data, actions) {
+            const donorName = document.getElementById("donorName").value.trim();
+            if (!donorName) {
+              showError("Please enter your name before proceeding.");
+              throw new Error("Name required");
+            }
+            if (!selectedAmount || selectedAmount < 100) {
+              showError("Please select a donation amount ($1 minimum).");
+              throw new Error("Amount required");
+            }
+            clearError();
+
+            const amountInDollars = (selectedAmount / 100).toFixed(2);
+
+            try {
+              const response = await fetch("https://donations.madhavsindia.workers.dev/paypal/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount: amountInDollars, ...getFormData() })
+              });
+
+              const result = await response.json();
+
+              if (!response.ok || !result.orderID) {
+                showError("Error creating PayPal order: " + (result.error || "Unknown error"));
+                throw new Error("Order creation failed");
+              }
+
+              return result.orderID;
+
+            } catch (error) {
+              console.error("PayPal createOrder error:", error);
+              showError("Unable to process PayPal payment. Please try again or use card payment.");
+              throw error;
+            }
+          },
+
+          onApprove: async function (data, actions) {
+            try {
+              const response = await fetch("https://donations.madhavsindia.workers.dev/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderID: data.orderID })
+              });
+
+              const result = await response.json();
+
+              if (!response.ok || !result.success) {
+                showError("Payment was authorized but capture failed. Please contact support with order ID: " + data.orderID);
+                throw new Error("Capture failed");
+              }
+
+              showSuccess();
+
+            } catch (error) {
+              console.error("PayPal onApprove error:", error);
+              showError("Payment processing error. Please contact support.");
+            }
+          },
+
+          onCancel: function (data) {
+            console.log("PayPal payment cancelled by user");
+          },
+
+          onError: function (err) {
+            console.error("PayPal error:", err);
+            showError("A PayPal error occurred. Please try again or use card payment below.");
+          }
+
+        }).render('#paypal-button-container');
+
+      } else {
+        console.error("PayPal SDK not loaded");
+        document.getElementById("paypal-button-container").style.display = "none";
+        document.querySelector(".payment-divider").style.display = "none";
+      }
+
+    }); // end DOMContentLoaded
   </script>
 </body>
 </html>
